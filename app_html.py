@@ -57,9 +57,40 @@ def create():
         else:
             db_connection = get_db_connection()
             collection_name = db_connection['sandbox']
-            print(f"FORM: {request.form}")
             collection_name.insert_one({'_id': id, 'title': title, 'content': content, 'created': datetime.utcnow()})
             return redirect(url_for('index'))
     
     return render_template('create.html')
+
+
+@app.route('/<int:id>/edit', methods=('GET', 'POST'))
+def edit(id):
+    post = get_post(id)
+
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+
+        if not title:
+            flash('Title is required!')
+        else:
+            db_connection = get_db_connection()
+            collection_name = db_connection['sandbox']
+            collection_name.update_one({'_id': str(id)}, {'$set': {'title': title, 'content': content}})
+            return redirect(url_for('index'))
+
+    return render_template('edit.html', post=post)
+
+
+@app.route('/<int:id>/delete', methods=('POST',))
+def delete(id):
+    post = get_post(id)
+    
+    db_connection = get_db_connection()
+    collection_name = db_connection['sandbox']
+    collection_name.delete_one({'_id': str(id)})
+
+    flash('"{}" was successfully deleted!'.format(post['title']))
+    return redirect(url_for('index'))
+
 
