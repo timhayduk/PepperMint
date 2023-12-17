@@ -18,9 +18,7 @@ def get_db_connection():
 def get_post(post_id):
     db_connection = get_db_connection()
     collection_name = db_connection['sandbox']
-    print(f"ID: {post_id}")
     post = collection_name.find_one({"_id": str(post_id)})
-    print(f"POST: {post}")
     if post is None:
         abort(404)
     return post
@@ -35,7 +33,6 @@ def index():
     db_connection = get_db_connection()
     collection_name = db_connection['sandbox']
     posts = list(collection_name.find())
-    print(f"POSTS: {posts}")
     return render_template('index.html', posts=posts)
 
 
