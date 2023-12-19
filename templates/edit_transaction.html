@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% block title %} Edit "{{ transaction['account'] }} - {{ transaction['description'] }}" {% endblock %}</h1>
+
+<form method="post">
+    <div class="form-group">
+        <label for="account">Account</label>
+        <input type="text" name="account" placeholder="Account"
+               class="form-control"
+               value="{{ request.form['account'] or transaction['account'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea name="description" placeholder="Description"
+                  class="form-control">{{ request.form['description'] or transaction['description'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Amount</label>
+        <input type="number" name="amount" placeholder="amount"
+               class="form-control"
+               value="{{ request.form['amount'] or transaction['amount'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" name="date"
+               class="form-control"
+               value="{{ request.form['date'] or transaction['date'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+</form>
+
+{% endblock %}

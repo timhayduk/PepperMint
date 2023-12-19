@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>{% block title %} Accounts {% endblock %}</h2>
+    
+    <table class="table">
+        <thead>
+            <th>Name</th>
+            <th>Description</th>
+            <th></th>
+        </thead>
+        <tbody>
+            {% for account in accounts %}
+                <tr>
+                    <td>{{ account['name'] }}</td>
+                    <td>{{ account['description'] }}</td>
+                    <td>
+                        <form action="{{ url_for('delete_account', id=account['_id']) }}" method="DELETE">
+                            <input type="submit" value="Delete Account"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this account?')">
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

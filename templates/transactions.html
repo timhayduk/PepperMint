@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>{% block title %} Transactions {% endblock %}</h2>
+    
+    <table class="table">
+        <thead>
+            <th>Account</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th></th>
+        </thead>
+        <tbody>
+            {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction['account'] }}</td>
+                    <td>
+                        <span class="badge badge-primary">{{ transaction['date'] }}</span>
+                    </td>
+                    <td>{{ transaction['description'] }}</td>
+                    <td>{{ transaction['amount'] }}</td>
+                    <td>
+                        <form action="{{ url_for('edit_transaction', id=transaction['_id']) }}" method="GET">
+                            <input type="submit" value="Edit"
+                                    class="btn btn-primary btn-sm">
+                        </form>
+                        <form action="{{ url_for('delete_transaction', id=transaction['_id']) }}" method="DELETE">
+                            <input type="submit" value="Delete"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this transaction?')">
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
