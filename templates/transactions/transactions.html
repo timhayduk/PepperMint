@@ -3,8 +3,14 @@
 {% block content %}
     <h2>{% block title %} Transactions {% endblock %}</h2>
     
+    <form action="{{ url_for('create_transaction') }}" method="GET">
+        <input type="submit" value="+ New Transaction"
+                class="btn btn-success btn-sm">
+    </form>
+
     <table class="table">
         <thead>
+            <th></th>
             <th>Account</th>
             <th>Date</th>
             <th>Description</th>
@@ -14,6 +20,7 @@
         <tbody>
             {% for transaction in transactions %}
                 <tr>
+                    <td>{{ transaction['icon'] }}</td>
                     <td>{{ transaction['account'] }}</td>
                     <td>
                         <span class="badge badge-primary">{{ transaction['date'] }}</span>
