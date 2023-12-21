@@ -2,14 +2,6 @@
 
 {% block content %}
     <h1>{% block title %} Welcome to PepperMint {% endblock %}</h1>
-    {% for post in posts %}
-        <a href="{{ url_for('post', post_id=post['_id']) }}">
-            <h2>{{ post['title'] }}</h2>
-        </a>
-        <span class="badge badge-primary">{{ post['created'] }}</span>
-        <a href="{{ url_for('edit', id=post['_id']) }}">
-            <span class="badge badge-warning">Edit</span>
-        </a>
-        <hr>
-    {% endfor %}
+    <hr>
+    <h2>Net Worth: ${{net_worth}}</h2>
 {% endblock %}

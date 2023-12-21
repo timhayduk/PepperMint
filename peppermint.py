@@ -55,62 +55,14 @@ def update_account_balance(account_id, transaction_amount):
 
 @app.route('/')
 def index():
-    return redirect(url_for('transactions'))
+    net_worth = 0.0
+    db_connection = get_db_connection()
+    accounts = db_connection['accounts']
+    accounts_list = list(accounts.find({}))
+    for account in accounts_list:
+        net_worth += account['balance']
 
-
-# @app.route('/<int:post_id>')
-# def post(post_id):
-#     post = get_post(post_id)
-#     return render_template('post.html', post=post)
-
-
-# @app.route('/create', methods=('GET', 'POST'))
-# def create():
-#     if request.method == 'POST':
-#         id = request.form['_id']
-#         title = request.form['title']
-#         content = request.form['content']
-
-#         if not title:
-#             flash('Title is required!')
-#         else:
-#             db_connection = get_db_connection()
-#             collection_name = db_connection['sandbox']
-#             collection_name.insert_one({'_id': id, 'title': title, 'content': content, 'created': datetime.utcnow()})
-#             return redirect(url_for('index'))
-    
-#     return render_template('create.html')
-
-
-# @app.route('/<int:id>/edit', methods=('GET', 'POST'))
-# def edit(id):
-#     post = get_post(id)
-
-#     if request.method == 'POST':
-#         title = request.form['title']
-#         content = request.form['content']
-
-#         if not title:
-#             flash('Title is required!')
-#         else:
-#             db_connection = get_db_connection()
-#             collection_name = db_connection['sandbox']
-#             collection_name.update_one({'_id': str(id)}, {'$set': {'title': title, 'content': content}})
-#             return redirect(url_for('index'))
-
-#     return render_template('edit.html', post=post)
-
-
-# @app.route('/<int:id>/delete', methods=('POST',))
-# def delete(id):
-#     post = get_post(id)
-    
-#     db_connection = get_db_connection()
-#     collection_name = db_connection['sandbox']
-#     collection_name.delete_one({'_id': str(id)})
-
-#     flash('"{}" was successfully deleted!'.format(post['title']))
-#     return redirect(url_for('index'))
+    return render_template('index.html', net_worth=net_worth)
 
 
 @app.route('/accounts')
@@ -351,3 +303,40 @@ def delete_rule(id):
 
     flash('"{}" was successfully deleted!'.format(rule['name']))
     return redirect(url_for('rules'))
+
+
+@app.route('/budgets')
+def budgets():
+    db_connection = get_db_connection()
+    budgets = db_connection['budgets']
+    budgets_list = list(budgets.find({}).sort({'name': 1}))
+    return render_template('budgets/budgets.html', budgets=budgets_list)
+
+
+@app.route('/budgets/create', methods=('GET', 'POST'))
+def create_budget():
+    db_connection = get_db_connection()
+    budgets = db_connection['budgets']
+
+    if request.method == 'POST':
+        carryover = 'carryover' in request.form.keys()
+        budgets.insert_one({
+            'name': request.form['name'],
+            'description': request.form['description'],
+            'amount': request.form['amount'],
+            'carryover': carryover,
+        })
+        return redirect(url_for('budgets'))
+    
+    return  render_template('budgets/create_budget.html')
+
+
+@app.route('/budgets/<string:id>/delete')
+def delete_budget(id):
+    db_connection = get_db_connection()
+    budgets = db_connection['budgets']
+    budget = budgets.find_one({'_id': ObjectId(id)})
+    budgets.delete_one({'_id': ObjectId(id)})
+
+    flash('"{}" was successfully deleted!'.format(budget['name']))
+    return redirect(url_for('budgets'))
