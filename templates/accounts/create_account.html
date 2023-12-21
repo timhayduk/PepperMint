@@ -6,7 +6,7 @@
 <form method="post">
     <div class="form-group">
         <label for="content">Name</label>
-        <input type="text" name="name" placeholder="Name"
+        <input type="text" name="name" placeholder="Name" required
                class="form-control"
                value="{{ request.form['name'] }}">
         </input>
@@ -16,6 +16,14 @@
         <label for="description">Description</label>
         <textarea name="description" placeholder="Description"
                   class="form-control">{{ request.form['description'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Balance</label>
+        <input type="text" name="balance" placeholder=0
+               class="form-control"
+               value="{{ request.form['balance'] }}">
+        </input>
     </div>
 
     <div class="form-group">

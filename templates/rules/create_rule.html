@@ -6,7 +6,7 @@
 <form method="post">
     <div class="form-group">
         <label for="content">Name</label>
-        <input type="text" name="name" placeholder="Name"
+        <input type="text" name="name" placeholder="Name" required
                class="form-control"
                value="{{ request.form['name'] }}">
         </input>
@@ -20,7 +20,7 @@
 
     <div class="form-group">
         <label for="content">Regex</label>
-        <input type="text" name="regex" placeholder="Regex"
+        <input type="text" name="regex" placeholder="Regex" required
                class="form-control"
                value="{{ request.form['regex'] }}">
         </input>
@@ -28,7 +28,7 @@
 
     <div class="form-group">
         <label for="content">Category</label>
-        <select name="category" class="Input">
+        <select name="category" class="Input" required>
             {% for category in categories %}
                 <option value="{{ category['_id'] }}" SELECTED>{{ category['name'] }}</option>"
             {% endfor %}

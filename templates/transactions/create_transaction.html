@@ -6,7 +6,7 @@
 <form method="post">
     <div class="form-group">
         <label for="content">Account</label>
-        <select name="account" class="Input">
+        <select name="account" class="Input" required>
             {% for account in accounts %}
                 <option value="{{ account['_id'] }}" SELECTED>{{ account['name'] }}</option>"
             {% endfor %}
@@ -15,13 +15,13 @@
 
     <div class="form-group">
         <label for="description">Description</label>
-        <textarea name="description" placeholder="Description"
+        <textarea name="description" placeholder="Description" required
                   class="form-control">{{ request.form['description'] }}</textarea>
     </div>
 
     <div class="form-group">
         <label for="content">Amount</label>
-        <input type="number" name="amount" placeholder="Amount"
+        <input type="number" name="amount" placeholder="Amount" required
                class="form-control"
                value="{{ request.form['amount'] }}">
         </input>
@@ -29,7 +29,7 @@
 
     <div class="form-group">
         <label for="date">Date</label>
-        <input type="date" name="date"
+        <input type="date" name="date" required
                class="form-control"
                value="{{ request.form['date'] }}">
         </input>

@@ -1,6 +1,7 @@
 from bson.objectid import ObjectId
 from datetime import datetime
 from flask import Flask, render_template, request, url_for, flash, redirect
+from re import search, IGNORECASE
 from pymongo import MongoClient
 from utils import get_db_connection
 from werkzeug.exceptions import abort
@@ -37,6 +38,19 @@ def update_category_map():
     categories_list = list(categories.find({}))
     for category in categories_list:
         CATEGORY_MAP[str(category['_id'])] = category['icon']
+
+
+def get_rules():
+    db_connection = get_db_connection()
+    rules = db_connection['rules']
+    return list(rules.find({}))
+
+
+def update_account_balance(account_id, transaction_amount):
+    db_connection = get_db_connection()
+    accounts = db_connection['accounts']
+    account = accounts.find_one({'_id': account_id})
+    accounts.update_one({'_id': account_id}, {'$set': {'balance': account['balance'] + transaction_amount}})
 
 
 @app.route('/')
@@ -114,9 +128,9 @@ def create_account():
 
     if request.method == 'POST':
         accounts.insert_one({
-            'icon': request.form['icon'],
             'name': request.form['name'],
             'description': request.form['description'],
+            'balance': request.form['balance'],
         })
         return redirect(url_for('accounts'))
     
@@ -138,7 +152,7 @@ def delete_account(id):
 def transactions():
     db_connection = get_db_connection()
     transactions = db_connection['transactions']
-    transactions_list = list(transactions.find({}))
+    transactions_list = list(transactions.find({}).sort({'date': -1}))
 
     update_account_map()
     update_category_map()
@@ -161,12 +175,24 @@ def create_transaction():
     transactions = db_connection['transactions']
 
     if request.method == 'POST':
-        transactions.insert_one({
+        new_transaction = {
             'account': request.form['account'],
             'description': request.form['description'],
             'amount': request.form['amount'],
             'date': request.form['date'],
-        })
+        }
+
+        rules = get_rules()
+        for rule in rules:
+            print(f"RULE: {rule}\nSEARCH: {search(rule['regex'], new_transaction['description'])}")
+            if search(rule['regex'], new_transaction['description'], flags=IGNORECASE) is not None:
+                new_transaction['category'] = rule['category']
+                break
+
+        transactions.insert_one(new_transaction)
+
+        update_account_balance(ObjectId(new_transaction['account']), float(new_transaction['amount']))
+
         return redirect(url_for('transactions'))
     
     accounts = db_connection['accounts']
