@@ -114,6 +114,12 @@ def transactions():
         else:
             transaction['account'] = f"UNKNOWN ACCOUNT ({transaction['account']})"
         
+        if 'to_account' in transaction.keys() and transaction['to_account'] is not None:
+            if transaction['to_account'] in ACCOUNT_MAP.keys():
+                transaction['account'] += f" -> {ACCOUNT_MAP[transaction['to_account']]}"
+            else:
+                transaction['account'] += f" -> UNKNOWN ACCOUNT ({transaction['to_account']})"
+
         if 'category' in transaction.keys() and transaction['category'] in CATEGORY_MAP.keys():
             transaction['icon'] = CATEGORY_MAP[transaction['category']]
         else:
@@ -134,6 +140,11 @@ def create_transaction():
             'date': request.form['date'],
         }
 
+        if request.form['to_account'] != "None":
+            new_transaction['to_account'] = request.form['to_account']
+        else:
+            new_transaction['to_account'] = None
+
         rules = get_rules()
         for rule in rules:
             print(f"RULE: {rule}\nSEARCH: {search(rule['regex'], new_transaction['description'])}")
@@ -143,7 +154,11 @@ def create_transaction():
 
         transactions.insert_one(new_transaction)
 
-        update_account_balance(ObjectId(new_transaction['account']), float(new_transaction['amount']))
+        if new_transaction['to_account'] is not None:
+            update_account_balance(ObjectId(new_transaction['account']), -float(new_transaction['amount']))
+            update_account_balance(ObjectId(new_transaction['to_account']), float(new_transaction['amount']))
+        else:
+            update_account_balance(ObjectId(new_transaction['account']), float(new_transaction['amount']))
 
         return redirect(url_for('transactions'))
     
@@ -162,6 +177,7 @@ def edit_transaction(id):
         transactions.update_one({'_id': transaction['_id']}, {
             '$set': {
                 'account': request.form['account'],
+                'to_account': request.form['to_account'],
                 'description': request.form['description'],
                 'amount': request.form['amount'],
                 'date': request.form['date']
@@ -169,15 +185,35 @@ def edit_transaction(id):
         })
         return redirect(url_for('transactions'))
     
+    update_account_map()
+    if transaction['account'] in ACCOUNT_MAP.keys():
+        transaction['account'] = ACCOUNT_MAP[transaction['account']]
+    else:
+        transaction['account'] = "UNKNOWN ACCOUNT"
+
+    if transaction['to_account'] in ACCOUNT_MAP.keys():
+        transaction['to_account'] = ACCOUNT_MAP[transaction['to_account']]
+    elif transaction['to_account'] is not None:
+        transaction['to_account'] = "UNKNOWN ACCOUNT"
+
     return  render_template('transactions/edit_transaction.html', transaction=transaction)
 
 
-@app.route('/transactions/<string:id>/delete')
-def delete_transaction(id):
+@app.route('/transactions/<string:id>/delete/<string:undo_transaction>')
+def delete_transaction(id, undo_transaction=False):
     db_connection = get_db_connection()
     transactions = db_connection['transactions']
     transaction = transactions.find_one({'_id': ObjectId(id)})
     transactions.delete_one({'_id': ObjectId(id)})
+
+    # Undo the transaction from the account balances
+    print(f"undo_transaction: {undo_transaction}\nundo_transaction class:{undo_transaction.__class__}")
+    if bool(undo_transaction):
+        if 'to_account' in transaction.keys() and transaction['to_account'] is not None:
+            update_account_balance(ObjectId(transaction['account']), float(transaction['amount']))
+            update_account_balance(ObjectId(transaction['to_account']), -float(transaction['amount']))
+        else:
+            update_account_balance(ObjectId(transaction['account']), -float(transaction['amount']))
 
     flash('"{} - {}" was successfully deleted!'.format(transaction['account'], transaction['description']))
     return redirect(url_for('transactions'))

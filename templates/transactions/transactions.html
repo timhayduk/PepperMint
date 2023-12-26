@@ -32,10 +32,15 @@
                             <input type="submit" value="Edit"
                                     class="btn btn-primary btn-sm">
                         </form>
-                        <form action="{{ url_for('delete_transaction', id=transaction['_id']) }}" method="DELETE">
+                        <form action="{{ url_for('delete_transaction', id=transaction['_id'], undo_transaction=True) }}" method="DELETE">
+                            <input type="submit" value="Undo & delete"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to undo and delete this transaction?')">
+                        </form>
+                        <form action="{{ url_for('delete_transaction', id=transaction['_id'], undo_transaction=False) }}" method="DELETE">
                             <input type="submit" value="Delete"
                                     class="btn btn-danger btn-sm"
-                                    onclick="return confirm('Are you sure you want to delete this transaction?')">
+                                    onclick="return confirm('Are you sure you want to delete this transaction? Doing so without undoing will leave balances unchanged!')">
                         </form>
                     </td>
                 </tr>

@@ -8,7 +8,17 @@
         <label for="content">Account</label>
         <select name="account" class="Input" required>
             {% for account in accounts %}
-                <option value="{{ account['_id'] }}" SELECTED>{{ account['name'] }}</option>"
+                <option value="{{ account['_id'] }}">{{ account['name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="content">To Account</label>
+        <select name="to_account" class="Input">
+            <option value="None" SELECTED>None</option>
+            {% for account in accounts %}
+                <option value="{{ account['_id'] }}">{{ account['name'] }}</option>
             {% endfor %}
         </select>
     </div>

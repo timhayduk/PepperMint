@@ -6,9 +6,17 @@
 <form method="post">
     <div class="form-group">
         <label for="account">Account</label>
-        <input type="text" name="account" placeholder="Account"
+        <input type="text" name="account" placeholder="Account" disabled
                class="form-control"
                value="{{ request.form['account'] or transaction['account'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="account">To Account</label>
+        <input type="text" name="to_account" placeholder="To Account" disabled
+               class="form-control"
+               value="{{ request.form['to_account'] or transaction['to_account'] }}">
         </input>
     </div>
 
