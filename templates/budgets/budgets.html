@@ -13,8 +13,9 @@
             <th>Name</th>
             <th>Description</th>
             <th>Category</th>
-            <th>Amount</th>
+            <th>Amount ($)</th>
             <th>Carry Over?</th>
+            <th>Period (in months)</th>
             <th>Status</th>
             <th></th>
         </thead>
@@ -24,8 +25,9 @@
                     <td>{{ budget['name'] }}</td>
                     <td>{{ budget['description'] }}</td>
                     <td>{{ budget['category'] }}</td>
-                    <td>${{ budget['amount'] }}</td>
-                    <td>${{ budget['carryover'] }}</td>
+                    <td>{{ budget['amount'] }}</td>
+                    <td>{{ budget['carryover'] }}</td>
+                    <td>{{ budget['period'] }}</td>
                     <td>
                         <div class="progress progress-striped active">
                             <style>

@@ -136,6 +136,7 @@ def create_transaction():
     if request.method == 'POST':
         new_transaction = {
             'account': request.form['account'],
+            'category': request.form['category'],
             'description': request.form['description'],
             'amount': float(request.form['amount']),
             'date': request.form['date'],
@@ -165,7 +166,9 @@ def create_transaction():
     
     accounts = db_connection['accounts']
     accounts_list = list(accounts.find({}))
-    return  render_template('transactions/create_transaction.html', accounts=accounts_list)
+    categories = db_connection['categories']
+    categories_list = list(categories.find({}))
+    return  render_template('transactions/create_transaction.html', accounts=accounts_list, categories_list=categories_list)
 
 
 @app.route('/transactions/<string:id>/edit', methods=('GET', 'POST'))
@@ -177,8 +180,7 @@ def edit_transaction(id):
     if request.method == 'POST':
         transactions.update_one({'_id': transaction['_id']}, {
             '$set': {
-                'account': request.form['account'],
-                'to_account': request.form['to_account'],
+                'category': request.form['category'],
                 'description': request.form['description'],
                 'amount': float(request.form['amount']),
                 'date': request.form['date']
@@ -197,7 +199,9 @@ def edit_transaction(id):
     elif transaction['to_account'] is not None:
         transaction['to_account'] = "UNKNOWN ACCOUNT"
 
-    return  render_template('transactions/edit_transaction.html', transaction=transaction)
+    categories = db_connection['categories']
+    categories_list = list(categories.find({}))
+    return  render_template('transactions/edit_transaction.html', transaction=transaction, categories_list=categories_list)
 
 
 @app.route('/transactions/<string:id>/delete/<string:undo_transaction>')
@@ -355,7 +359,7 @@ def budgets():
         # Calculate the budget's progress for the month
         transactions = db_connection['transactions']
         time_now = datetime.now()
-        time_next_month = datetime.now() + relativedelta(months=+1)
+        time_next_month = datetime.now() + relativedelta(months=+budget['period'])
         this_month = f"{time_now.year}-{str(time_now.month).zfill(2)}"
         next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
         query = {'$and': [
@@ -368,7 +372,7 @@ def budgets():
         for transaction in transactions_list:
             total_transaction_amount += transaction['amount']
         budget['total'] = total_transaction_amount
-        budget['progress'] = total_transaction_amount / budget['amount']
+        budget['progress'] = (total_transaction_amount / budget['amount']) * 100.0
 
         # Process the category ID into the human-readable name
         update_category_map()
@@ -392,6 +396,7 @@ def create_budget():
             'description': request.form['description'],
             'category': request.form['category'],
             'amount': float(request.form['amount']),
+            'period': int(request.form['period']),
             'carryover': carryover,
         })
         return redirect(url_for('budgets'))

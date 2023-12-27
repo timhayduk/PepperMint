@@ -21,6 +21,15 @@
     </div>
 
     <div class="form-group">
+        <label for="content">Category</label>
+        <select name="category" class="Input">
+            {% for category in categories_list %}
+                <option value="{{ category['_id'] }}">{{ category['name'] }} - {{ category['description'] }}</option>"
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
         <label for="description">Description</label>
         <textarea name="description" placeholder="Description"
                   class="form-control">{{ request.form['description'] or transaction['description'] }}</textarea>
@@ -28,7 +37,7 @@
 
     <div class="form-group">
         <label for="content">Amount</label>
-        <input type="number" name="amount" placeholder="amount"
+        <input type="number" step="0.01" name="amount" placeholder="amount"
                class="form-control"
                value="{{ request.form['amount'] or transaction['amount'] }}">
         </input>
