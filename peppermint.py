@@ -1,5 +1,6 @@
 from bson.objectid import ObjectId
 from datetime import datetime
+from dateutil.relativedelta import *
 from flask import Flask, render_template, request, url_for, flash, redirect
 from re import search, IGNORECASE
 from pymongo import MongoClient
@@ -136,7 +137,7 @@ def create_transaction():
         new_transaction = {
             'account': request.form['account'],
             'description': request.form['description'],
-            'amount': request.form['amount'],
+            'amount': float(request.form['amount']),
             'date': request.form['date'],
         }
 
@@ -179,7 +180,7 @@ def edit_transaction(id):
                 'account': request.form['account'],
                 'to_account': request.form['to_account'],
                 'description': request.form['description'],
-                'amount': request.form['amount'],
+                'amount': float(request.form['amount']),
                 'date': request.form['date']
             }
         })
@@ -327,7 +328,7 @@ def edit_rule(id):
     
     categories = db_connection['categories']
     categories_list = categories.find({})
-    return  render_template('rules/edit_rule.html', rule=rule, categories=categories_list)
+    return render_template('rules/edit_rule.html', rule=rule, categories=categories_list)
 
 
 @app.route('/rules/<string:id>/delete')
@@ -346,6 +347,36 @@ def budgets():
     db_connection = get_db_connection()
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
+
+    for budget in budgets_list:
+        # Process the name into a class name for dynamic styles on the progress bars
+        budget['class_name'] = '_'.join(budget['name'].split(' '))
+
+        # Calculate the budget's progress for the month
+        transactions = db_connection['transactions']
+        time_now = datetime.now()
+        time_next_month = datetime.now() + relativedelta(months=+1)
+        this_month = f"{time_now.year}-{str(time_now.month).zfill(2)}"
+        next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
+        query = {'$and': [
+            {'category': budget['category']},
+            {'date': {'$gte': this_month}},
+            {'date': {'$lt': next_month}}
+        ]}
+        transactions_list = list(transactions.find(query))
+        total_transaction_amount = 0
+        for transaction in transactions_list:
+            total_transaction_amount += transaction['amount']
+        budget['total'] = total_transaction_amount
+        budget['progress'] = total_transaction_amount / budget['amount']
+
+        # Process the category ID into the human-readable name
+        update_category_map()
+        if budget['category'] in CATEGORY_MAP:
+            budget['category'] = CATEGORY_MAP[budget['category']]
+        else:
+            budget['category'] = f"UNKNOWN CATEGORY ({budget['category']})"
+
     return render_template('budgets/budgets.html', budgets=budgets_list)
 
 
@@ -359,12 +390,15 @@ def create_budget():
         budgets.insert_one({
             'name': request.form['name'],
             'description': request.form['description'],
-            'amount': request.form['amount'],
+            'category': request.form['category'],
+            'amount': float(request.form['amount']),
             'carryover': carryover,
         })
         return redirect(url_for('budgets'))
     
-    return  render_template('budgets/create_budget.html')
+    categories = db_connection['categories']
+    categories_list = categories.find({})
+    return  render_template('budgets/create_budget.html', categories_list=categories_list)
 
 
 @app.route('/budgets/<string:id>/delete')

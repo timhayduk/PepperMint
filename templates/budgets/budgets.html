@@ -12,8 +12,10 @@
         <thead>
             <th>Name</th>
             <th>Description</th>
+            <th>Category</th>
             <th>Amount</th>
             <th>Carry Over?</th>
+            <th>Status</th>
             <th></th>
         </thead>
         <tbody>
@@ -21,8 +23,22 @@
                 <tr>
                     <td>{{ budget['name'] }}</td>
                     <td>{{ budget['description'] }}</td>
+                    <td>{{ budget['category'] }}</td>
                     <td>${{ budget['amount'] }}</td>
                     <td>${{ budget['carryover'] }}</td>
+                    <td>
+                        <div class="progress progress-striped active">
+                            <style>
+                                div.{{ budget['class_name'] }} {
+                                    width: {{ budget['progress'] }}%;
+                                }
+                            </style>
+                            <div class="progress-bar {{ budget['class_name'] }}"  role="progressbar" aria-valuenow="{{ budget['progress'] }}" aria-valuemin="0" aria-valuemax="100">
+                                <span class="sr-only"></span>
+                            </div>
+                        </div>
+                        <div>{{ budget['total'] }} / {{ budget['amount'] }}</div>
+                    </td>
                     <td>
                         <form action="{{ url_for('delete_budget', id=budget['_id']) }}" method="DELETE">
                             <input type="submit" value="Delete Budget"
