@@ -51,7 +51,7 @@ def update_account_balance(account_id, transaction_amount):
     db_connection = get_db_connection()
     accounts = db_connection['accounts']
     account = accounts.find_one({'_id': account_id})
-    accounts.update_one({'_id': account_id}, {'$set': {'balance': account['balance'] + transaction_amount}})
+    accounts.update_one({'_id': account_id}, {'$set': {'balance': round(account['balance'] + transaction_amount, 2)}})
 
 
 @app.route('/')
@@ -61,7 +61,7 @@ def index():
     accounts = db_connection['accounts']
     accounts_list = list(accounts.find({}))
     for account in accounts_list:
-        net_worth += account['balance']
+        net_worth = round(net_worth + account['balance'], 2)
 
     return render_template('index.html', net_worth=net_worth)
 
@@ -83,7 +83,7 @@ def create_account():
         accounts.insert_one({
             'name': request.form['name'],
             'description': request.form['description'],
-            'balance': request.form['balance'],
+            'balance': float(request.form['balance']),
         })
         return redirect(url_for('accounts'))
     
@@ -149,7 +149,6 @@ def create_transaction():
 
         rules = get_rules()
         for rule in rules:
-            print(f"RULE: {rule}\nSEARCH: {search(rule['regex'], new_transaction['description'])}")
             if search(rule['regex'], new_transaction['description'], flags=IGNORECASE) is not None:
                 new_transaction['category'] = rule['category']
                 break
@@ -212,7 +211,6 @@ def delete_transaction(id, undo_transaction=False):
     transactions.delete_one({'_id': ObjectId(id)})
 
     # Undo the transaction from the account balances
-    print(f"undo_transaction: {undo_transaction}\nundo_transaction class:{undo_transaction.__class__}")
     if bool(undo_transaction):
         if 'to_account' in transaction.keys() and transaction['to_account'] is not None:
             update_account_balance(ObjectId(transaction['account']), float(transaction['amount']))
@@ -352,6 +350,9 @@ def budgets():
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
 
+    total_income = 0
+    total_spending = 0
+
     for budget in budgets_list:
         # Process the name into a class name for dynamic styles on the progress bars
         budget['class_name'] = '_'.join(budget['name'].split(' '))
@@ -370,9 +371,9 @@ def budgets():
         transactions_list = list(transactions.find(query))
         total_transaction_amount = 0
         for transaction in transactions_list:
-            total_transaction_amount += transaction['amount']
-        budget['total'] = total_transaction_amount
-        budget['progress'] = (total_transaction_amount / budget['amount']) * 100.0
+            total_transaction_amount = round(total_transaction_amount + transaction['amount'], 2)
+        budget['total'] = round(total_transaction_amount, 2)
+        budget['progress'] = round((total_transaction_amount / budget['amount']) * 100.0, 2)
 
         # Process the category ID into the human-readable name
         update_category_map()
@@ -381,7 +382,12 @@ def budgets():
         else:
             budget['category'] = f"UNKNOWN CATEGORY ({budget['category']})"
 
-    return render_template('budgets/budgets.html', budgets=budgets_list)
+        if budget['total'] > 0:
+            total_income = round(total_income + budget['total'], 2)
+        else:
+            total_spending = round(total_spending + budget['total'], 2)
+
+    return render_template('budgets/budgets.html', budgets=budgets_list, total_income=total_income, total_spending=total_spending)
 
 
 @app.route('/budgets/create', methods=('GET', 'POST'))

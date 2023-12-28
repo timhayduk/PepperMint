@@ -3,6 +3,10 @@
 {% block content %}
     <h2>{% block title %} Budgets {% endblock %}</h2>
 
+    <h3>This Month's Cash Flow: {{ total_income + total_spending }}</h3>
+    <h3>Total Income: {{ total_income }}</h3>
+    <h3>Total Spending: {{ total_spending }}</h3>
+
     <form action="{{ url_for('create_budget') }}" method="GET">
         <input type="submit" value="+ New Budget"
                 class="btn btn-success btn-sm">
@@ -39,7 +43,7 @@
                                 <span class="sr-only"></span>
                             </div>
                         </div>
-                        <div>{{ budget['total'] }} / {{ budget['amount'] }}</div>
+                        <div>{{ budget['total'] }} / {{ budget['amount'] }} ({{ budget['progress'] }}%)</div>
                     </td>
                     <td>
                         <form action="{{ url_for('delete_budget', id=budget['_id']) }}" method="DELETE">
