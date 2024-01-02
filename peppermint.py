@@ -1,4 +1,5 @@
 from bson.objectid import ObjectId
+from calendar import month_name
 from datetime import datetime
 from dateutil.relativedelta import *
 from flask import Flask, render_template, request, url_for, flash, redirect
@@ -23,7 +24,6 @@ app.config['SECRET_KEY'] = 'abcd1234'
 
 ACCOUNT_MAP = {}
 CATEGORY_MAP = {}
-
 
 def update_account_map():
     db_connection = get_db_connection()
@@ -88,6 +88,25 @@ def create_account():
         return redirect(url_for('accounts'))
     
     return  render_template('accounts/create_account.html')
+
+
+@app.route('/accounts/<string:id>/edit', methods=('GET', 'POST'))
+def edit_account(id):
+    db_connection = get_db_connection()
+    accounts = db_connection['accounts']
+    account = accounts.find_one({'_id': ObjectId(id)})
+
+    if request.method == 'POST':
+        accounts.update_one({'_id': account['_id']}, {
+            '$set': {
+            'name': request.form['name'],
+            'description': request.form['description'],
+            'balance': float(request.form['balance']),
+        }
+        })
+        return redirect(url_for('accounts'))
+    
+    return render_template('accounts/edit_account.html', account=account)
 
 
 @app.route('/accounts/<string:id>/delete')
@@ -346,6 +365,14 @@ def delete_rule(id):
 
 @app.route('/budgets')
 def budgets():
+    date = datetime.now()
+    year = date.year
+    month = date.month
+    return(redirect(url_for('budgets_by_month', year=year, month=month)))
+
+
+@app.route('/budgets/<string:year>/<string:month>')
+def budgets_by_month(year, month):
     db_connection = get_db_connection()
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
@@ -359,9 +386,8 @@ def budgets():
 
         # Calculate the budget's progress for the month
         transactions = db_connection['transactions']
-        time_now = datetime.now()
-        time_next_month = datetime.now() + relativedelta(months=+budget['period'])
-        this_month = f"{time_now.year}-{str(time_now.month).zfill(2)}"
+        time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+budget['period'])
+        this_month = f"{year}-{str(month).zfill(2)}"
         next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
         query = {'$and': [
             {'category': budget['category']},
@@ -387,7 +413,9 @@ def budgets():
         else:
             total_spending = round(total_spending + budget['total'], 2)
 
-    return render_template('budgets/budgets.html', budgets=budgets_list, total_income=total_income, total_spending=total_spending)
+    cash_flow = round(total_income + total_spending, 2)
+
+    return render_template('budgets/budgets.html', month=month_name[int(month)], year=year, budgets=budgets_list, cash_flow=cash_flow, total_income=total_income, total_spending=total_spending)
 
 
 @app.route('/budgets/create', methods=('GET', 'POST'))
@@ -410,6 +438,31 @@ def create_budget():
     categories = db_connection['categories']
     categories_list = categories.find({})
     return  render_template('budgets/create_budget.html', categories_list=categories_list)
+
+
+@app.route('/budgets/<string:id>/edit', methods=('GET', 'POST'))
+def edit_budget(id):
+    db_connection = get_db_connection()
+    budgets = db_connection['budgets']
+    budget = budgets.find_one({'_id': ObjectId(id)})
+
+    if request.method == 'POST':
+        carryover = 'carryover' in request.form.keys()
+        budgets.update_one({'_id': budget['_id']}, {
+            '$set': {
+                'name': request.form['name'],
+                'description': request.form['description'],
+                'category': request.form['category'],
+                'amount': float(request.form['amount']),
+                'period': int(request.form['period']),
+                'carryover': carryover,
+            }
+        })
+        return redirect(url_for('budgets'))
+    
+    categories = db_connection['categories']
+    categories_list = categories.find({})
+    return render_template('budgets/edit_budget.html', budget=budget, categories_list=categories_list)
 
 
 @app.route('/budgets/<string:id>/delete')

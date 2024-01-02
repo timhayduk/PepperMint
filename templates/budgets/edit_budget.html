@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{% block title %} Edit "{{ budget['name'] }} " {% endblock %}</h1>
+
+<form method="post">
+    <div class="form-group">
+        <label for="content">Name</label>
+        <input type="text" name="name" placeholder="Name" required
+               class="form-control"
+               value="{{ request.form['name'] or budget['name'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea name="description" placeholder="Description"
+                  class="form-control">{{ request.form['description'] or budget['description'] }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Category</label>
+        <select name="category" class="Input" required>
+            {% for category in categories_list %}
+                <option value="{{ category['_id'] }}">{{ category['name'] }} - {{ category['description'] }}</option>"
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Amount</label>
+        <input type="number" step="0.01" name="amount" placeholder=0 required
+               class="form-control"
+               value="{{ request.form['amount'] or budget['amount'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Period (in months)</label>
+        <input type="number" name="period" placeholder=0 required
+               class="form-control"
+               value="{{ request.form['period'] or budget['period'] }}">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <label for="content">Carry over remainder each month?</label>
+        <input type="checkbox" name="carryover"
+               class="form-control">
+        </input>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+</form>
+
+{% endblock %}
