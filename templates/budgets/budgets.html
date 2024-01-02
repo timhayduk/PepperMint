@@ -1,7 +1,22 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>{% block title %} Budgets for {{ month }} {{ year }} {% endblock %}</h2>
+    <h2>{% block title %} Budgets for {{ month_name }} {{ year }} {% endblock %}</h2>
+
+    <div class="button-wrapper">
+        <form action="{{ url_for('budgets_previous_month', year=year, month=month) }}" method="GET">
+            <input type="submit" value="<- Previous Month"
+                    class="btn btn-dark btn-sm">
+        </form>
+        <form action="{{ url_for('budgets') }}" method="GET">
+            <input type="submit" value="Current Month"
+                    class="btn btn-dark btn-sm">
+        </form>
+        <form action="{{ url_for('budgets_next_month', year=year, month=month) }}" method="GET">
+            <input type="submit" value="Next Month ->"
+                    class="btn btn-dark btn-sm">
+        </form>
+    </div>
 
     <h3>This Month's Cash Flow: {{ cash_flow }}</h3>
     <h3>Total Income: {{ total_income }}</h3>

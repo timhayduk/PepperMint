@@ -371,6 +371,18 @@ def budgets():
     return(redirect(url_for('budgets_by_month', year=year, month=month)))
 
 
+@app.route('/budgets_next_month/<string:year>/<string:month>')
+def budgets_next_month(year, month):
+    next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
+    return(redirect(url_for('budgets_by_month', year=next_month.year, month=next_month.month)))
+
+
+@app.route('/budgets_previous_month/<string:year>/<string:month>')
+def budgets_previous_month(year, month):
+    prev_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=-1)
+    return(redirect(url_for('budgets_by_month', year=prev_month.year, month=prev_month.month)))
+
+
 @app.route('/budgets/<string:year>/<string:month>')
 def budgets_by_month(year, month):
     db_connection = get_db_connection()
@@ -415,7 +427,7 @@ def budgets_by_month(year, month):
 
     cash_flow = round(total_income + total_spending, 2)
 
-    return render_template('budgets/budgets.html', month=month_name[int(month)], year=year, budgets=budgets_list, cash_flow=cash_flow, total_income=total_income, total_spending=total_spending)
+    return render_template('budgets/budgets.html', month_name=month_name[int(month)], year=year, month=month, budgets=budgets_list, cash_flow=cash_flow, total_income=total_income, total_spending=total_spending)
 
 
 @app.route('/budgets/create', methods=('GET', 'POST'))
