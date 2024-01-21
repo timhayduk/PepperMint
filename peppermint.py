@@ -129,19 +129,19 @@ def transactions(category='all'):
 
 
 @app.route('/transactions_next_month/<string:year>/<string:month>/<string:category>')
-def transactions_next_month(year, month):
+def transactions_next_month(year, month, category):
     next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
-    return(redirect(url_for('transactions_by_month', year=next_month.year, month=next_month.month)))
+    return(redirect(url_for('transactions_by_month', year=next_month.year, month=next_month.month, category=category)))
 
 
 @app.route('/transactions_previous_month/<string:year>/<string:month>/<string:category>')
-def transactions_previous_month(year, month):
+def transactions_previous_month(year, month, category):
     prev_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=-1)
-    return(redirect(url_for('transactions_by_month', year=prev_month.year, month=prev_month.month)))
+    return(redirect(url_for('transactions_by_month', year=prev_month.year, month=prev_month.month, category=category)))
 
 
 @app.route('/transactions/<string:year>/<string:month>/<string:category>', methods=('GET', 'POST'))
-def transactions_by_month(year, month, category):
+def transactions_by_month(year, month, category='all'):
     if request.method == 'POST':
         return(redirect(url_for('transactions_by_month', year=year, month=month, category=request.form['category'])))
     db_connection = get_db_connection()
@@ -182,7 +182,7 @@ def transactions_by_month(year, month, category):
     categories = db_connection['categories']
     categories_list = categories.find({})
 
-    return render_template('transactions/transactions.html', year=year, month=month, transactions=transactions_list, categories_list=categories_list)
+    return render_template('transactions/transactions.html', year=year, month=month, transactions=transactions_list, categories_list=categories_list, category=category)
 
 
 @app.route('/transactions/create', methods=('GET', 'POST'))
@@ -427,7 +427,7 @@ def budgets_by_month(year, month):
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
 
-    income_names = ['paycheck', 'stocks']
+    income_names = ['paycheck', 'stocks', 'interest']
 
     overall_stats = {
         'total_income': 0.0,
