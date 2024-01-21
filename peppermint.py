@@ -121,10 +121,44 @@ def delete_account(id):
 
 
 @app.route('/transactions')
-def transactions():
+def transactions(category='all'):
+    date = datetime.now()
+    year = date.year
+    month = date.month
+    return(redirect(url_for('transactions_by_month', year=year, month=month, category=category)))
+
+
+@app.route('/transactions_next_month/<string:year>/<string:month>/<string:category>')
+def transactions_next_month(year, month):
+    next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
+    return(redirect(url_for('transactions_by_month', year=next_month.year, month=next_month.month)))
+
+
+@app.route('/transactions_previous_month/<string:year>/<string:month>/<string:category>')
+def transactions_previous_month(year, month):
+    prev_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=-1)
+    return(redirect(url_for('transactions_by_month', year=prev_month.year, month=prev_month.month)))
+
+
+@app.route('/transactions/<string:year>/<string:month>/<string:category>', methods=('GET', 'POST'))
+def transactions_by_month(year, month, category):
+    if request.method == 'POST':
+        return(redirect(url_for('transactions_by_month', year=year, month=month, category=request.form['category'])))
     db_connection = get_db_connection()
+
     transactions = db_connection['transactions']
-    transactions_list = list(transactions.find({}).sort({'date': -1}))
+    time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
+    this_month = f"{year}-{str(month).zfill(2)}"
+    next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
+    query = {'$and': [
+        {'date': {'$gte': this_month}},
+        {'date': {'$lt': next_month}}
+    ]}
+
+    if category != 'all':
+        # Only add a category filter if we're searching for one
+        query['$and'].append({'category': category})
+    transactions_list = list(transactions.find(query).sort({'date': -1}))
 
     update_account_map()
     update_category_map()
@@ -144,7 +178,11 @@ def transactions():
             transaction['icon'] = CATEGORY_MAP[transaction['category']]
         else:
             transaction['icon'] = CATEGORY_MAP['unknown']
-    return render_template('transactions/transactions.html', transactions=transactions_list)
+    
+    categories = db_connection['categories']
+    categories_list = categories.find({})
+
+    return render_template('transactions/transactions.html', year=year, month=month, transactions=transactions_list, categories_list=categories_list)
 
 
 @app.route('/transactions/create', methods=('GET', 'POST'))
@@ -389,8 +427,21 @@ def budgets_by_month(year, month):
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
 
-    total_income = 0
-    total_spending = 0
+    income_names = ['paycheck', 'stocks']
+
+    overall_stats = {
+        'total_income': 0.0,
+        'total_spending': 0.0,
+        'cash_flow': 0.0,
+        'total_budgeted_income': 0.0,
+        'total_budgeted_spending': 0.0,
+        'total_budget_percentage': 0.0,
+    }
+
+    income_budgets = []
+    over_budgets = []
+    warning_budgets = []
+    good_budgets = []
 
     for budget in budgets_list:
         # Process the name into a class name for dynamic styles on the progress bars
@@ -411,23 +462,49 @@ def budgets_by_month(year, month):
         for transaction in transactions_list:
             total_transaction_amount = round(total_transaction_amount + transaction['amount'], 2)
         budget['total'] = round(total_transaction_amount, 2)
-        budget['progress'] = round((total_transaction_amount / budget['amount']) * 100.0, 2)
+        if budget['amount'] != 0.0:
+            budget['progress'] = round((total_transaction_amount / budget['amount']) * 100.0, 2)
+        else:
+            budget['progress'] = 100.0
 
         # Process the category ID into the human-readable name
         update_category_map()
+        budget['category_id'] = budget['category']
         if budget['category'] in CATEGORY_MAP:
             budget['category'] = CATEGORY_MAP[budget['category']]
         else:
             budget['category'] = f"UNKNOWN CATEGORY ({budget['category']})"
 
         if budget['total'] > 0:
-            total_income = round(total_income + budget['total'], 2)
+            overall_stats['total_income'] = round(overall_stats['total_income'] + budget['total'], 2)
         else:
-            total_spending = round(total_spending + budget['total'], 2)
+            overall_stats['total_spending'] = round(overall_stats['total_spending'] + budget['total'], 2)
+        
+        # Separate out budgets into color categories
+        if budget['name'].lower() in income_names:
+            income_budgets.append(budget)
+        elif budget['progress'] > 100.0:
+            over_budgets.append(budget)
+        elif budget['progress'] >= 75.0:
+            warning_budgets.append(budget)
+        else:
+            good_budgets.append(budget)
 
-    cash_flow = round(total_income + total_spending, 2)
+        # Calculate total income vs. spending budget percentage
+        if budget['name'].lower() in income_names:
+            overall_stats['total_budgeted_income'] = round(overall_stats['total_budgeted_income'] + budget['amount'])
+        else:
+            overall_stats['total_budgeted_spending'] = round(overall_stats['total_budgeted_spending'] + round(budget['amount'] / float(budget['period']), 2))
 
-    return render_template('budgets/budgets.html', month_name=month_name[int(month)], year=year, month=month, budgets=budgets_list, cash_flow=cash_flow, total_income=total_income, total_spending=total_spending)
+    overall_stats['total_budget_percentage'] = round((-overall_stats['total_budgeted_spending'] / overall_stats['total_budgeted_income']) * 100.0, 2)
+    overall_stats['total_percentage'] = round((-overall_stats['total_spending'] / overall_stats['total_income']) * 100.0, 2)
+    overall_stats['cash_flow'] = round(overall_stats['total_income'] + overall_stats['total_spending'], 2)
+
+    over_budgets = sorted(over_budgets, key=lambda x: x['progress'], reverse=True)
+    warning_budgets = sorted(warning_budgets, key=lambda x: x['progress'], reverse=True)
+    good_budgets = sorted(good_budgets, key=lambda x: x['progress'], reverse=True)
+
+    return render_template('budgets/budgets.html', month_name=month_name[int(month)], year=year, month=month, income_budgets=income_budgets, over_budgets=over_budgets, warning_budgets=warning_budgets, good_budgets=good_budgets, overall_stats=overall_stats)
 
 
 @app.route('/budgets/create', methods=('GET', 'POST'))

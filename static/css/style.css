@@ -6,3 +6,8 @@ div.button-wrapper form {
     display: table-cell;
     padding: 5px;
 }
+
+form.form-wrapper div {
+    display: table-cell;
+    padding: 5px;
+}

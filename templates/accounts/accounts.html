@@ -3,10 +3,14 @@
 {% block content %}
     <h2>{% block title %} Accounts {% endblock %}</h2>
 
+    <br>
+
     <form action="{{ url_for('create_account') }}" method="GET">
         <input type="submit" value="+ New Account"
                 class="btn btn-success btn-sm">
     </form>
+
+    <br>
     
     <table class="table">
         <thead>

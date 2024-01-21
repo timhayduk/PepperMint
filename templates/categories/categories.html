@@ -2,11 +2,15 @@
 
 {% block content %}
     <h2>{% block title %} Categories {% endblock %}</h2>
+
+    <br>
     
     <form action="{{ url_for('create_category') }}" method="GET">
         <input type="submit" value="+ New Category"
                 class="btn btn-success btn-sm">
     </form>
+
+    <br>
 
     <table class="table">
         <thead>

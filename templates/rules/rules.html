@@ -2,11 +2,15 @@
 
 {% block content %}
     <h2>{% block title %} Rules {% endblock %}</h2>
+
+    <br>
     
     <form action="{{ url_for('create_rule') }}" method="GET">
         <input type="submit" value="+ New Rule"
                 class="btn btn-success btn-sm">
     </form>
+
+    <br>
 
     <table class="table">
         <thead>

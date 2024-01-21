@@ -2,11 +2,50 @@
 
 {% block content %}
     <h2>{% block title %} Transactions {% endblock %}</h2>
+
+    <br>
     
+    <div class="button-wrapper">
+        <form action="{{ url_for('transactions_previous_month', year=year, month=month, category=category) }}" method="GET">
+            <input type="submit" value="<- Previous Month"
+                    class="btn btn-dark btn-sm">
+        </form>
+        <form action="{{ url_for('transactions', category=category) }}" method="GET">
+            <input type="submit" value="Current Month"
+                    class="btn btn-dark btn-sm">
+        </form>
+        <form action="{{ url_for('transactions_next_month', year=year, month=month, category=category) }}" method="GET">
+            <input type="submit" value="Next Month ->"
+                    class="btn btn-dark btn-sm">
+        </form>
+    </div>
+
+    <br>
+
     <form action="{{ url_for('create_transaction') }}" method="GET">
         <input type="submit" value="+ New Transaction"
                 class="btn btn-success btn-sm">
     </form>
+
+    <br>
+
+    <form method="post" class="form-wrapper">    
+        <div class="form-group">
+            <label for="content">Category</label>
+            <select name="category" class="Input" required>
+                <option value="all" SELECTED>All</option>"
+                {% for category in categories_list %}
+                    <option value="{{ category['_id'] }}">{{ category['name'] }}</option>"
+                {% endfor %}
+            </select>
+        </div>
+    
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </form>
+
+    <br>
 
     <table class="table">
         <thead>
