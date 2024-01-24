@@ -492,9 +492,9 @@ def budgets_by_month(year, month):
 
         # Calculate total income vs. spending budget percentage
         if budget['name'].lower() in income_names:
-            overall_stats['total_budgeted_income'] = round(overall_stats['total_budgeted_income'] + budget['amount'])
+            overall_stats['total_budgeted_income'] = round(overall_stats['total_budgeted_income'] + budget['amount'], 2)
         else:
-            overall_stats['total_budgeted_spending'] = round(overall_stats['total_budgeted_spending'] + round(budget['amount'] / float(budget['period']), 2))
+            overall_stats['total_budgeted_spending'] = round(overall_stats['total_budgeted_spending'] + round(budget['amount'] / float(budget['period']), 2), 2)
 
     overall_stats['total_budget_percentage'] = round((-overall_stats['total_budgeted_spending'] / overall_stats['total_budgeted_income']) * 100.0, 2)
     overall_stats['total_percentage'] = round((-overall_stats['total_spending'] / overall_stats['total_income']) * 100.0, 2)
