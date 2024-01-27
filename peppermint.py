@@ -618,16 +618,15 @@ def trends_by_budget(budget_filter='all'):
         budget_total_amount = 0.0
         months_to_average = 0.0
         for year_and_month in years_and_months:
-            budget_total = calculate_budget_spending(budget, year_and_month[0], year_and_month[1])
+            budget_month_total = calculate_budget_spending(budget, year_and_month[0], year_and_month[1])
             if budget['name'].lower() not in INCOME_NAMES:
-                budget_total = -budget_total
+                budget_month_total = -budget_month_total
                 amount_line_dataset['data'].append(-budget['amount'])
             else:
                 amount_line_dataset['data'].append(budget['amount'])
-            print(f"BUDGET: {budget['name']}, YEAR: {year_and_month[0]}, MONTH: {year_and_month[1]}, SPENT: {budget_total}")
-            dataset['data'].append(budget_total)
-            budget_total_amount = round(budget_total_amount + budget_total, 2)
-            if budget_total_amount > 0.0:
+            dataset['data'].append(budget_month_total)
+            budget_total_amount = round(budget_total_amount + budget_month_total, 2)
+            if budget_month_total > 0.0:
                 months_to_average = round(months_to_average + 1.0, 2)
 
         if months_to_average > 0.0:
