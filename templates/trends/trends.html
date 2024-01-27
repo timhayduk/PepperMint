@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>{% block title %} Trends {% endblock %}</h2>
+
+    <br>
+    
+    <h3>Spending Trends</h3>
+
+    <br>
+
+    <form method="post" class="form-wrapper">    
+        <div class="form-group">
+            <label for="content">Budget</label>
+            <select name="budget_filter" class="Input" required>
+                <option value="all" SELECTED>All</option>"
+                {% for budget in budgets_list %}
+                    <option value="{{ budget['name'] }}">{{ budget['name'] }}</option>"
+                {% endfor %}
+            </select>
+        </div>
+    
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </form>
+
+    <br>
+
+    <div>
+        <canvas id="spendingChart"></canvas>
+    </div>
+
+    <br>
+
+    <h3>Income Trends</h3>
+    <div>
+        <canvas id="incomeChart"></canvas>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        const spendingChart = document.getElementById('spendingChart');
+        const incomeChart = document.getElementById('incomeChart');
+        
+        new Chart(spendingChart, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for year_and_month in years_and_months %}
+                        '{{ year_and_month[1] }}/{{ year_and_month[0] }}',
+                    {% endfor %}
+                ],
+                datasets: JSON.parse('{{spending_datasets | tojson }}')
+            },
+            options: {
+            scales: {
+                y: {
+                beginAtZero: true
+                }
+            }
+            }
+        });
+
+        new Chart(incomeChart, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for year_and_month in years_and_months %}
+                        '{{ year_and_month[1] }}/{{ year_and_month[0] }}',
+                    {% endfor %}
+                ],
+                datasets: JSON.parse('{{income_datasets | tojson }}')
+            },
+            options: {
+            scales: {
+                y: {
+                beginAtZero: true
+                }
+            }
+            }
+        });
+    </script>
+    
+{% endblock %}

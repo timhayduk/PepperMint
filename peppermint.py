@@ -24,6 +24,7 @@ app.config['SECRET_KEY'] = 'abcd1234'
 
 ACCOUNT_MAP = {}
 CATEGORY_MAP = {}
+INCOME_NAMES = ['paycheck', 'stocks', 'interest']
 
 def update_account_map():
     db_connection = get_db_connection()
@@ -421,13 +422,31 @@ def budgets_previous_month(year, month):
     return(redirect(url_for('budgets_by_month', year=prev_month.year, month=prev_month.month)))
 
 
+def calculate_budget_spending(budget, year, month):
+    # Calculate the budget's progress for the month
+    db_connection = get_db_connection()
+    transactions = db_connection['transactions']
+    time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+budget['period'])
+    this_month = f"{year}-{str(month).zfill(2)}"
+    next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
+    query = {'$and': [
+        {'category': budget['category']},
+        {'date': {'$gte': this_month}},
+        {'date': {'$lt': next_month}}
+    ]}
+    transactions_list = list(transactions.find(query))
+    total_transaction_amount = 0.0
+    for transaction in transactions_list:
+        total_transaction_amount = round(total_transaction_amount + transaction['amount'], 2)
+    total_transaction_amount = round(total_transaction_amount, 2)
+    return total_transaction_amount
+
+
 @app.route('/budgets/<string:year>/<string:month>')
 def budgets_by_month(year, month):
     db_connection = get_db_connection()
     budgets = db_connection['budgets']
     budgets_list = list(budgets.find({}).sort({'name': 1}))
-
-    income_names = ['paycheck', 'stocks', 'interest']
 
     overall_stats = {
         'total_income': 0.0,
@@ -448,22 +467,9 @@ def budgets_by_month(year, month):
         budget['class_name'] = '_'.join(budget['name'].split(' '))
 
         # Calculate the budget's progress for the month
-        transactions = db_connection['transactions']
-        time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+budget['period'])
-        this_month = f"{year}-{str(month).zfill(2)}"
-        next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
-        query = {'$and': [
-            {'category': budget['category']},
-            {'date': {'$gte': this_month}},
-            {'date': {'$lt': next_month}}
-        ]}
-        transactions_list = list(transactions.find(query))
-        total_transaction_amount = 0
-        for transaction in transactions_list:
-            total_transaction_amount = round(total_transaction_amount + transaction['amount'], 2)
-        budget['total'] = round(total_transaction_amount, 2)
+        budget['total'] = calculate_budget_spending(budget, year, month)
         if budget['amount'] != 0.0:
-            budget['progress'] = round((total_transaction_amount / budget['amount']) * 100.0, 2)
+            budget['progress'] = round((budget['total'] / budget['amount']) * 100.0, 2)
         else:
             budget['progress'] = 100.0
 
@@ -481,7 +487,7 @@ def budgets_by_month(year, month):
             overall_stats['total_spending'] = round(overall_stats['total_spending'] + budget['total'], 2)
         
         # Separate out budgets into color categories
-        if budget['name'].lower() in income_names:
+        if budget['name'].lower() in INCOME_NAMES:
             income_budgets.append(budget)
         elif budget['progress'] > 100.0:
             over_budgets.append(budget)
@@ -491,7 +497,7 @@ def budgets_by_month(year, month):
             good_budgets.append(budget)
 
         # Calculate total income vs. spending budget percentage
-        if budget['name'].lower() in income_names:
+        if budget['name'].lower() in INCOME_NAMES:
             overall_stats['total_budgeted_income'] = round(overall_stats['total_budgeted_income'] + budget['amount'], 2)
         else:
             overall_stats['total_budgeted_spending'] = round(overall_stats['total_budgeted_spending'] + round(budget['amount'] / float(budget['period']), 2), 2)
@@ -563,3 +569,83 @@ def delete_budget(id):
 
     flash('"{}" was successfully deleted!'.format(budget['name']))
     return redirect(url_for('budgets'))
+
+
+@app.route('/trends', methods=('GET', 'POST'))
+def trends():
+    return redirect(url_for('trends_by_budget', budget_filter='all'))
+
+
+@app.route('/trends/<string:budget_filter>', methods=('GET', 'POST'))
+def trends_by_budget(budget_filter='all'):
+    if request.method == 'POST':
+        return redirect(url_for('trends_by_budget', budget_filter=request.form['budget_filter']))
+
+    db_connection = get_db_connection()
+    budgets = db_connection['budgets']
+    budgets_list = list(budgets.find({}))
+
+    current_date = datetime.now()
+    dates = [datetime(year=int(current_date.year), month=int(current_date.month), day=1) + relativedelta(months=x) for x in range(-12, 1)]
+    years_and_months = [(d.year, d.month) for d in dates]
+
+    income_datasets = []
+    spending_datasets = []
+    
+    for budget in budgets_list:
+        if budget_filter.lower() != 'all' and budget['name'].lower() != budget_filter.lower() and budget['name'].lower() not in INCOME_NAMES:
+            continue
+
+        dataset = {
+            'label': f"{budget['name']} Total",
+            'data': [],
+            'borderWidth': 1
+        }
+        amount_line_dataset = {
+            'label': f"{budget['name']} Budget",
+            'data': [],
+            'borderWidth': 1,
+            'type': 'line',
+            'fill': False,
+        }
+        average_line_dataset = {
+            'label': f"{budget['name']} Average",
+            'data': [],
+            'borderWidth': 1,
+            'type': 'line',
+            'fill': False,
+        }
+        budget_total_amount = 0.0
+        months_to_average = 0.0
+        for year_and_month in years_and_months:
+            budget_total = calculate_budget_spending(budget, year_and_month[0], year_and_month[1])
+            if budget['name'].lower() not in INCOME_NAMES:
+                budget_total = -budget_total
+                amount_line_dataset['data'].append(-budget['amount'])
+            else:
+                amount_line_dataset['data'].append(budget['amount'])
+            print(f"BUDGET: {budget['name']}, YEAR: {year_and_month[0]}, MONTH: {year_and_month[1]}, SPENT: {budget_total}")
+            dataset['data'].append(budget_total)
+            budget_total_amount = round(budget_total_amount + budget_total, 2)
+            if budget_total_amount > 0.0:
+                months_to_average = round(months_to_average + 1.0, 2)
+
+        if months_to_average > 0.0:
+            average_budget_amount = round(budget_total_amount / months_to_average, 2)
+        else:
+            average_budget_amount = 0.0
+
+        for year_and_month in years_and_months:
+            average_line_dataset['data'].append(average_budget_amount)
+
+        if budget['name'].lower() in INCOME_NAMES:
+            income_datasets.append(dataset)
+            income_datasets.append(amount_line_dataset)
+            income_datasets.append(average_line_dataset)
+        else:
+            spending_datasets.append(dataset)
+            spending_datasets.append(amount_line_dataset)
+            spending_datasets.append(average_line_dataset)
+
+
+    return render_template('trends/trends.html', budgets_list=budgets_list, years_and_months=years_and_months, spending_datasets=spending_datasets, income_datasets=income_datasets)
