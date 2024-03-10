@@ -502,8 +502,16 @@ def budgets_by_month(year, month):
         else:
             overall_stats['total_budgeted_spending'] = round(overall_stats['total_budgeted_spending'] + round(budget['amount'] / float(budget['period']), 2), 2)
 
-    overall_stats['total_budget_percentage'] = round((-overall_stats['total_budgeted_spending'] / overall_stats['total_budgeted_income']) * 100.0, 2)
-    overall_stats['total_percentage'] = round((-overall_stats['total_spending'] / overall_stats['total_income']) * 100.0, 2)
+    if overall_stats['total_budgeted_income'] != 0:
+        overall_stats['total_budget_percentage'] = round((-overall_stats['total_budgeted_spending'] / overall_stats['total_budgeted_income']) * 100.0, 2)
+    else:
+        overall_stats['total_budget_percentage'] = 0.00
+
+    if overall_stats['total_income'] != 0:
+        overall_stats['total_percentage'] = round((-overall_stats['total_spending'] / overall_stats['total_income']) * 100.0, 2)
+    else:
+        overall_stats['total_percentage'] = 0.00
+
     overall_stats['cash_flow'] = round(overall_stats['total_income'] + overall_stats['total_spending'], 2)
 
     over_budgets = sorted(over_budgets, key=lambda x: x['progress'], reverse=True)
