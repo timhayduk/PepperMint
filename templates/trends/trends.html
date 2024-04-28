@@ -5,6 +5,16 @@
 
     <br>
     
+    <h3>Cash Flow Trend</h3>
+
+    <br>
+
+    <div>
+        <canvas id="cashFlowChart"></canvas>
+    </div>
+
+    <br>
+    
     <h3>Spending Trends</h3>
 
     <br>
@@ -41,9 +51,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
+        const cashFlowChart = document.getElementById('cashFlowChart');
         const spendingChart = document.getElementById('spendingChart');
         const incomeChart = document.getElementById('incomeChart');
         
+        new Chart(cashFlowChart, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for year_and_month in years_and_months %}
+                        '{{ year_and_month[1] }}/{{ year_and_month[0] }}',
+                    {% endfor %}
+                ],
+                datasets: JSON.parse('{{cash_flow_datasets | tojson }}')
+            },
+            options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+            }
+        });
+
         new Chart(spendingChart, {
             type: 'bar',
             data: {
@@ -57,7 +87,7 @@
             options: {
             scales: {
                 y: {
-                beginAtZero: true
+                    beginAtZero: true
                 }
             }
             }
@@ -76,7 +106,7 @@
             options: {
             scales: {
                 y: {
-                beginAtZero: true
+                    beginAtZero: true
                 }
             }
             }

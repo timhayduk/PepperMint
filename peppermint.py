@@ -24,7 +24,8 @@ app.config['SECRET_KEY'] = 'abcd1234'
 
 ACCOUNT_MAP = {}
 CATEGORY_MAP = {}
-INCOME_NAMES = ['paycheck', 'stocks', 'interest']
+INCOME_NAMES = ['paycheck', 'stocks', 'interest', 'credit card cash back']
+NON_CASH_FLOW_NAMES = ['Transfer', 'Credit Card Payment', 'Stock Deposit']
 
 def update_account_map():
     db_connection = get_db_connection()
@@ -146,8 +147,10 @@ def transactions_by_month(year, month, category='all'):
     if request.method == 'POST':
         return(redirect(url_for('transactions_by_month', year=year, month=month, category=request.form['category'])))
     db_connection = get_db_connection()
-
     transactions = db_connection['transactions']
+    categories = db_connection['categories']
+    budgets = db_connection['budgets']
+
     time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
     this_month = f"{year}-{str(month).zfill(2)}"
     next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
@@ -164,6 +167,13 @@ def transactions_by_month(year, month, category='all'):
     update_account_map()
     update_category_map()
     for transaction in transactions_list:
+        cat_id = "unknown" if transaction['category'] == "unknown" else ObjectId(transaction['category'])
+        category = list(categories.find({'_id': cat_id}))[0]
+        budget_list = list(budgets.find({'category': transaction['category']}))
+
+        if len(budget_list) == 0 and category['name'] not in NON_CASH_FLOW_NAMES:
+            flash('"{}" did not have a budget for category "{}"!'.format(transaction['description'], category['name']))
+
         if transaction['account'] in ACCOUNT_MAP.keys():
             transaction['account'] = ACCOUNT_MAP[transaction['account']]
         else:
@@ -180,7 +190,6 @@ def transactions_by_month(year, month, category='all'):
         else:
             transaction['icon'] = CATEGORY_MAP['unknown']
     
-    categories = db_connection['categories']
     categories_list = categories.find({})
 
     return render_template('transactions/transactions.html', year=year, month=month, transactions=transactions_list, categories_list=categories_list, category=category)
@@ -422,11 +431,36 @@ def budgets_previous_month(year, month):
     return(redirect(url_for('budgets_by_month', year=prev_month.year, month=prev_month.month)))
 
 
+def calculate_cash_flow_month(year, month):
+     # Calculate the over all cash flow for the month
+    db_connection = get_db_connection()
+    categories = db_connection['categories']
+    transfer_categories = list(categories.find({'name': {'$in': NON_CASH_FLOW_NAMES}}))
+
+    transfer_categories_ids = [str(cat['_id']) for cat in transfer_categories]
+
+    transactions = db_connection['transactions']
+    time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
+    this_month = f"{year}-{str(month).zfill(2)}"
+    next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
+    query = {'$and': [
+        {'category': {'$nin': transfer_categories_ids}},
+        {'date': {'$gte': this_month}},
+        {'date': {'$lt': next_month}}
+    ]}
+    transactions_list = list(transactions.find(query).sort({'date': 1}))
+    total_cash_flow = 0.0
+    for transaction in transactions_list:
+        total_cash_flow = round(total_cash_flow + transaction['amount'], 2)
+
+    return total_cash_flow
+
+
 def calculate_budget_spending(budget, year, month):
     # Calculate the budget's progress for the month
     db_connection = get_db_connection()
     transactions = db_connection['transactions']
-    time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+budget['period'])
+    time_next_month = datetime(year=int(year), month=int(month), day=1) + relativedelta(months=+1)
     this_month = f"{year}-{str(month).zfill(2)}"
     next_month = f"{time_next_month.year}-{str(time_next_month.month).zfill(2)}"
     query = {'$and': [
@@ -434,7 +468,7 @@ def calculate_budget_spending(budget, year, month):
         {'date': {'$gte': this_month}},
         {'date': {'$lt': next_month}}
     ]}
-    transactions_list = list(transactions.find(query))
+    transactions_list = list(transactions.find(query).sort({'date': 1}))
     total_transaction_amount = 0.0
     for transaction in transactions_list:
         total_transaction_amount = round(total_transaction_amount + transaction['amount'], 2)
@@ -600,6 +634,24 @@ def trends_by_budget(budget_filter='all'):
     income_datasets = []
     spending_datasets = []
     
+    cash_flow_dataset = {
+        'label': f"Cash Flow",
+        'data': [],
+        'borderWidth': 1,
+        'type': 'bar',
+        'backgroundColor': [],
+    }
+
+    for year_and_month in years_and_months:
+        cash_flow_month = calculate_cash_flow_month(year_and_month[0], year_and_month[1])
+        cash_flow_dataset['data'].append(cash_flow_month)
+        
+        if cash_flow_month < 0:
+            cash_flow_dataset['backgroundColor'].append("rgba(247, 2, 2, 0.5)")
+        else:
+            cash_flow_dataset['backgroundColor'].append("rgba(27, 99, 20, 0.5)")
+        
+
     for budget in budgets_list:
         if budget_filter.lower() != 'all' and budget['name'].lower() != budget_filter.lower() and budget['name'].lower() not in INCOME_NAMES:
             continue
@@ -607,7 +659,7 @@ def trends_by_budget(budget_filter='all'):
         dataset = {
             'label': f"{budget['name']} Total",
             'data': [],
-            'borderWidth': 1
+            'borderWidth': 1,
         }
         amount_line_dataset = {
             'label': f"{budget['name']} Budget",
@@ -655,4 +707,4 @@ def trends_by_budget(budget_filter='all'):
             spending_datasets.append(average_line_dataset)
 
 
-    return render_template('trends/trends.html', budgets_list=budgets_list, years_and_months=years_and_months, spending_datasets=spending_datasets, income_datasets=income_datasets)
+    return render_template('trends/trends.html', budgets_list=budgets_list, years_and_months=years_and_months, cash_flow_datasets=[cash_flow_dataset], spending_datasets=spending_datasets, income_datasets=income_datasets)
